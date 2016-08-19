@@ -8,6 +8,7 @@ export const POINTER_MODES = {
 };
 
 export function setActiveColor(c){
+  console.log("set active color");
   return {
     type : SET_ACTIVE_COLOR,
     color : c

@@ -8,24 +8,18 @@ import {
 } from '~/src/actions/Global';
 import {connect} from 'react-redux';
 import Swatch from './Swatch';
+import Color, {transparent, white} from '~/src/tools/Color';
 
 const MAX_COLOR = 255;
 const ONE_BYTE = 8;
 const TWO_BYTES = ONE_BYTE * 2;
-const transparent = new paper.Color(0, 0, 0, 0);
 
 class SwatchPanel extends Component {
     static propTypes = {
         setActiveColor: React.PropTypes.func.isRequired,
         setPointerMode: React.PropTypes.func.isRequired,
-        activeColor: React.PropTypes.oneOfType([
-            React.PropTypes.string,
-            React.PropTypes.instanceOf(paper.Color)
-        ]),
-        pickerColor: React.PropTypes.oneOfType([
-            React.PropTypes.string,
-            React.PropTypes.instanceOf(paper.Color)
-        ])
+        activeColor: React.PropTypes.instanceOf(Color),
+        pickerColor: React.PropTypes.instanceOf(Color)
     }
 
     constructor(props) {
@@ -47,6 +41,12 @@ class SwatchPanel extends Component {
         this.addSwatch(this.randomColor(), true);
         this.addSwatch(this.randomColor(), true);
         this.addPicker();
+    }
+
+    loadState(state){
+      this.setState(state, () => {
+        this.props.setActiveColor(this.state.swatches[this.state.activeSwatchId].color);
+      });
     }
 
     componentWillMount() {
@@ -105,7 +105,7 @@ class SwatchPanel extends Component {
 
     addPicker() {
         let {swatches} = this.state;
-        swatches.push({color: 'white', removable: false, isPicker: true});
+        swatches.push({color: white, removable: false, isPicker: true});
         this.setState({swatches});
     }
 
@@ -117,29 +117,22 @@ class SwatchPanel extends Component {
 
     // Code to update and remove
 
-    RGBToHex(r, g, b) {
-        let bin = r << TWO_BYTES | g << ONE_BYTE | b;
-        return (function (h) {
-            return new Array(7 - h.length).join('0') + h
-        })(bin.toString(16).toUpperCase())
-    }
-
     randomColor() {
         let r = ~~(Math.random() * MAX_COLOR);
         let g = ~~(Math.random() * MAX_COLOR);
         let b = ~~(Math.random() * MAX_COLOR);
-        let color = `#${this.RGBToHex(r, g, b)}`;
+        let color = new Color(r, g, b);
 
         return color;
     }
 
-    setColor(color) {
+    setColor(i) {
         const {swatches} = this.state;
         let nextState = {
-            color
+            activeSwatchId: i
         };
 
-        if (color === swatches.length - 1) {
+        if (i === swatches.length - 1) {
             nextState.pickerMode = true;
         }
 

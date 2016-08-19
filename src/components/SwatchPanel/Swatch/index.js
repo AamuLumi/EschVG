@@ -1,13 +1,11 @@
 import React, {Component} from 'react';
+import Color, {black, transparent, white} from '~/src/tools/Color';
 
 export default class Swatch extends Component {
     static propTypes = {
         setActive: React.PropTypes.func.isRequired,
         removeSwatch: React.PropTypes.func.isRequired,
-        color: React.PropTypes.oneOfType([
-            React.PropTypes.string,
-            React.PropTypes.instanceOf(paper.Color)
-        ]),
+        color: React.PropTypes.instanceOf(Color),
         isPicker: React.PropTypes.bool,
         removable: React.PropTypes.bool.isRequired,
         activeId: React.PropTypes.number.isRequired,
@@ -18,7 +16,7 @@ export default class Swatch extends Component {
         super(props);
 
         this.state = {
-            color: props.color || 'black',
+            color: props.color || black,
             isPicker: props.isPicker || false,
             removable: props.removable,
             activeId: props.activeId,
@@ -49,36 +47,10 @@ export default class Swatch extends Component {
         this.props = nextProps;
     }
 
-    getR(color) {
-        if (typeof color === 'string') {
-            return parseInt(color.substring(1, 2), 16) / 255;
-        } else {
-            return color.red;
-        }
-    }
-
-    getG(color) {
-        if (typeof color === 'string') {
-            return parseInt(color.substring(3, 4), 16) / 255;
-        } else {
-            return color.green;
-        }
-    }
-
-    getB(color) {
-        if (typeof color === 'string') {
-            return parseInt(color.substring(5, 6), 16) / 255;
-        } else {
-            return color.blue;
-        }
-    }
-
     needWhiteFont() {
         const {color} = this.state;
 
-        let a = 1 - (0.299 * this.getR(color) + 0.587 * this.getG(color) + 0.114 * this.getB(color));
-
-        console.log(color, this.getR(color), this.getG(color), this.getB(color), a);
+        let a = 1 - (0.299 * color.r() + 0.587 * color.g() + 0.114 * color.b()) /255;
 
         return a > 0.5;
     }
@@ -89,9 +61,9 @@ export default class Swatch extends Component {
         let swatchColor = color;
 
         if (typeof color === 'object' && color.alpha === 0) {
-            swatchColor = '#FFFFFF';
+            swatchColor = white.toHTML();
         } else if (typeof color === 'object') {
-            swatchColor = color._canvasStyle;
+            swatchColor = color.toHTML();
         }
 
         let classes = ['swatch'];

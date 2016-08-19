@@ -72,6 +72,12 @@ function createMenu(mainWindow) {
             click() {
                 mainWindow.setFullScreen(!mainWindow.isFullScreen());
             }
+        }, {
+            label: 'Toggle Developer Tools',
+            accelerator: 'F12',
+            click() {
+                  mainWindow.toggleDevTools();
+            }
         }]
     }];
 
@@ -89,7 +95,7 @@ function createWindow() {
         icon: './icon.png'
     });
 
-    //createMenu(mainWindow);
+    createMenu(mainWindow);
 
     // and load the index.html of the app.
     mainWindow.loadURL(`file://${__dirname}/index.html`);

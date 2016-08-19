@@ -46,7 +46,7 @@ a {
     justify-content: space-between;
 }
 .paper {
-    width: 100%;
+    width: auto;
     position: relative;
     display: flex;
     line-height: 0;
@@ -54,6 +54,12 @@ a {
     overflow: auto;
     background: #fff;
     user-select: none;
+    svg {
+      width: 100%;
+    }
+    &:active {
+      cursor: default;
+    }
 }
 .controls,
 .paper,
@@ -77,7 +83,6 @@ a {
         width: calc(100% - #{$m * 2});
         margin: $m;
         display: flex;
-        color: rgba(black, 0.3);
         justify-content: center;
         cursor: pointer;
         box-shadow: 0 0 0 1px currentColor;
@@ -92,6 +97,20 @@ a {
         &:focus {
             outline: 0;
         }
+    }
+    #config-panel{
+      margin: 0 $m;
+      width: 100%;
+      input {
+        width: calc(100% - #{$m *3});
+        color: rgba(black, 0.4);
+        margin: $m 0;
+        padding: 4px;
+        border-radius: $br;
+        border: 0;
+        box-shadow: 0 0 0 1px currentColor;
+        transition: all 250ms;
+      }
     }
 }
 .controls {
@@ -177,6 +196,9 @@ a {
 .saves {
   display: flex;
   flex-direction: column;
+  max-width: 500px;
+  margin-left: $m;
+  overflow-y: auto;
 }
 .size-changer {
     display: none;
@@ -186,4 +208,9 @@ a {
 }
 .white-font {
   color: white;
+}
+.picker {
+  display: flex;
+  justify-content: center;
+  margin: $m;
 }

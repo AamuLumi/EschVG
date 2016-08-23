@@ -95,7 +95,7 @@ class App extends React.Component {
             currentCol = Immutable.List();
             j = 0;
 
-            for (; j <= rows; j += HALF_TRIANGLE_FACTOR) {
+            for (; j <= rows +1; j += HALF_TRIANGLE_FACTOR) {
                 currentCol = currentCol.push(basicColor);
             }
             colorMap = colorMap.push(currentCol);
@@ -221,32 +221,6 @@ class App extends React.Component {
             } else {
                 let save = JSON.parse(data);
 
-                // Reload Paper component
-
-                let itemsObject = Immutable.List();
-
-                save.itemsObject.forEach((item) => {
-                    let currentColumn = Immutable.List();
-
-                    for (let el of item) {
-                        el.fillColor = new Color().fromObject(el.fillColor);
-                        currentColumn = currentColumn.push(el);
-                    }
-
-                    itemsObject = itemsObject.push(currentColumn);
-                });
-
-                this.refs.paper.getWrappedInstance().loadState({itemsObject: itemsObject});
-
-                // Reload SwatchPanel component
-
-                save.swatchPanel.swatches = save.swatchPanel.swatches.map((e) => {
-                    e.color = new Color().fromObject(e.color);
-                    return e;
-                });
-
-                this.refs.swatchPanel.getWrappedInstance().loadState(save.swatchPanel);
-
                 // Reload current component
 
                 save.state.colorMap = undefined;
@@ -254,6 +228,33 @@ class App extends React.Component {
                 this.setState(save.state, () => {
                     document.getElementById('cols').value = this.state.cols;
                     document.getElementById('rows').value = this.state.rows;
+
+                    // Reload Paper component
+
+                    let itemsObject = Immutable.List();
+
+                    save.itemsObject.forEach((item) => {
+                        let currentColumn = Immutable.List();
+
+                        for (let el of item) {
+                            el.fillColor = new Color().fromObject(el.fillColor);
+                            currentColumn = currentColumn.push(el);
+                        }
+
+                        itemsObject = itemsObject.push(currentColumn);
+                    });
+
+                    this.refs.paper.getWrappedInstance().loadState({itemsObject: itemsObject});
+
+                    // Reload SwatchPanel component
+
+                    save.swatchPanel.swatches = save.swatchPanel.swatches.map((e) => {
+                        e.color = new Color().fromObject(e.color);
+                        return e;
+                    });
+
+                    this.refs.swatchPanel.getWrappedInstance().loadState(save.swatchPanel);
+                    
                     this.props.setNotification({
                       message : 'Loaded ' + filename
                     });

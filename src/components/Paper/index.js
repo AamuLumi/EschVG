@@ -230,7 +230,7 @@ export default class Paper extends React.Component {
         for (let i = 0; i < cols; i++) {
             currentX = i * width;
             currentRow = Immutable.List();
-            for (let j = 0; j < rows; j++) {
+            for (let j = 0; j <= rows; j++) {
                 if (i % 2 === 0) {
                     currentY = j * height;
                     currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY, i, j * 2, colorMap.getIn([i, j * 2])));

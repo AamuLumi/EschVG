@@ -35,7 +35,7 @@ class Color {
     }
 
     fromObject(o) {
-        if (!o) {
+        if (!o || !o.colors) {
             return transparent;
         }
 

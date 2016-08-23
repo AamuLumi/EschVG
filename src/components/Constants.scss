@@ -1,0 +1,13 @@
+$m: (1em/2);
+$p: 0.5em;
+$br: (1em/8);
+$sidebar-left-cols: 2;
+$sidebar-diff: 1.5;
+$sidebar-right-cols: $sidebar-left-cols*$sidebar-diff;
+$col-width: 3em + $p;
+$sidebar-left-width: $col-width*$sidebar-left-cols + $p;
+$sidebar-right-width: $sidebar-left-width*$sidebar-diff;
+
+$dark-color: #1B5E20;
+$light-color: #4CAF50;
+$lighter-color: #81C784;

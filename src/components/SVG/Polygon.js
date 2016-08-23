@@ -25,11 +25,20 @@ export default class Polygon extends Component {
     }
 
     componentWillReceiveProps(nextProps){
+      let nextState = {};
+
+
       if (nextProps.points){
-        this.setState({points: nextProps.points});
+        nextState.points = nextProps.points;
+      }
+
+      if (nextProps.fillColor){
+        nextState.fillColor = nextProps.fillColor;
       }
 
       this.props = nextProps;
+
+      this.setState(nextState);
     }
 
     render() {

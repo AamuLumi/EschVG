@@ -1,12 +1,6 @@
-$m: (1em/2);
-$p: 0.5em;
-$br: (1em/8);
-$sidebar-left-cols: 2;
-$sidebar-diff: 1.5;
-$sidebar-right-cols: $sidebar-left-cols*$sidebar-diff;
-$col-width: 3em + $p;
-$sidebar-left-width: $col-width*$sidebar-left-cols + $p;
-$sidebar-right-width: $sidebar-left-width*$sidebar-diff;
+@import "./Constants";
+@import "./Notifier/Notifier";
+
 * {
     box-sizing: border-box;
 }
@@ -19,7 +13,7 @@ body {
     align-items: center;
     margin: 0;
     height: 100vh;
-    background: #01579B;
+    background: $dark-color;
     color: #fff;
     overflow: hidden;
     font-family: 'Open sans', sans-serif;
@@ -46,17 +40,13 @@ a {
     justify-content: space-between;
 }
 .paper {
-    width: auto;
+    width: 100%;
     position: relative;
-    display: flex;
     line-height: 0;
     padding: $p;
     overflow: auto;
     background: #fff;
     user-select: none;
-    svg {
-      width: 100%;
-    }
     &:active {
       cursor: default;
     }
@@ -213,4 +203,7 @@ a {
   display: flex;
   justify-content: center;
   margin: $m;
+}
+.export-png-canvas{
+  display: none;
 }

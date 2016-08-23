@@ -15,13 +15,14 @@ const sqrt = Math.sqrt;
 const sqrt3 = sqrt(3);
 
 const GRID_COLOR = lightGrey;
+const REDRAW_ITEMS = true;
 
 export default class Paper extends React.Component {
     static propTypes = {
         cols: React.PropTypes.number,
         rows: React.PropTypes.number,
         size: React.PropTypes.number,
-        colorMap: React.PropTypes.array.isRequired,
+        colorMap: React.PropTypes.instanceOf(Immutable.List),
         activeColor: React.PropTypes.instanceOf(Color),
         mapLastUpdated: React.PropTypes.number,
         itemsObject: React.PropTypes.array
@@ -47,8 +48,11 @@ export default class Paper extends React.Component {
         this.createItems = this.createItems.bind(this);
     }
 
-    reinit() {
+    reinit(redrawItems) {
         this.createBackground();
+        if (redrawItems){
+          this.createItems();
+        }
     }
 
     init() {
@@ -153,7 +157,7 @@ export default class Paper extends React.Component {
     // Draw methods
 
     renderTriangle(item) {
-        if (!item || !item.points) {
+        if (!item || !item.points || !item.fillColor) {
             return undefined;
         }
 
@@ -214,7 +218,7 @@ export default class Paper extends React.Component {
     }
 
     createItems() {
-        let {cols, rows, width, height} = this.state;
+        let {cols, rows, width, height, colorMap} = this.state;
 
         let midHeight = height / 2;
 
@@ -223,20 +227,18 @@ export default class Paper extends React.Component {
             currentY = 0;
         let currentRow = undefined;
 
-        let {colorMap} = this.state;
-
         for (let i = 0; i < cols; i++) {
             currentX = i * width;
             currentRow = Immutable.List();
             for (let j = 0; j < rows; j++) {
                 if (i % 2 === 0) {
                     currentY = j * height;
-                    currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY, i, j * 2, colorMap[i][j * 2]));
-                    currentRow = currentRow.push(this.createTriangle(currentX, currentY, i, j * 2 + 1, colorMap[i][j * 2 + 1]));
+                    currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY, i, j * 2, colorMap.getIn([i, j * 2])));
+                    currentRow = currentRow.push(this.createTriangle(currentX, currentY, i, j * 2 + 1, colorMap.getIn([i, j * 2 + 1])));
                 } else {
                     currentY = j * height - midHeight;
-                    currentRow = currentRow.push(this.createTriangle(currentX, currentY, i, j * 2, colorMap[i][j * 2]));
-                    currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY + height, i, j * 2 + 1, colorMap[i][j * 2 + 1]));
+                    currentRow = currentRow.push(this.createTriangle(currentX, currentY, i, j * 2, colorMap.getIn([i, j * 2])));
+                    currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY + height, i, j * 2 + 1, colorMap.getIn([i, j * 2 + 1])));
                 }
             }
 
@@ -373,11 +375,11 @@ export default class Paper extends React.Component {
     }
 
     componentWillReceiveProps(newProps) {
-        if (newProps.mapLastUpdated !== this.props.mapLastUpdated || newProps.colorMap !== this.props.colorMap) {
+        if (newProps.colorMap && newProps.colorMap !== this.props.colorMap) {
             this.setState({
                 colorMap: newProps.colorMap
             }, () => {
-                this.reinit();
+                this.reinit(REDRAW_ITEMS);
             });
         }
 
@@ -386,7 +388,7 @@ export default class Paper extends React.Component {
                 cols: newProps.cols,
                 rows: newProps.rows
             }, () => {
-                this.reinit();
+                this.reinit(REDRAW_ITEMS);
             });
         }
 

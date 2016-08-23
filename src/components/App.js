@@ -3,17 +3,20 @@ import Paper from './Paper';
 import fs from 'fs';
 import {connect} from 'react-redux';
 import {nativeImage, ipcRenderer} from 'electron';
-import {SketchPicker, SwatchesPicker} from 'react-color';
-import {setActiveColor} from '~/src/actions/Global';
+import {SketchPicker} from 'react-color';
+import Immutable from 'immutable';
+
+import {setActiveColor, setNotification} from '~/src/actions/Global';
 import SwatchPanel from './SwatchPanel';
 import Color, {transparent, black} from '~/src/tools/Color';
-import Immutable from 'immutable';
+import Notifier from './Notifier';
+
 import './App.scss';
 
 const DATA_FOLDER = './data/';
-const PNG_FOLDER = DATA_FOLDER + '/png/';
-const SVG_FOLDER = DATA_FOLDER + '/svg/';
-const SAVE_FOLDER = DATA_FOLDER + '/save/';
+const PNG_FOLDER = DATA_FOLDER + 'png/';
+const SVG_FOLDER = DATA_FOLDER + 'svg/';
+const SAVE_FOLDER = DATA_FOLDER + 'save/';
 
 const HALF_TRIANGLE_FACTOR = .5;
 const HALF_FACTOR = 2;
@@ -26,6 +29,7 @@ class App extends React.Component {
     static propTypes = {
         // Redux props
         setActiveColor: React.PropTypes.func.isRequired,
+        setNotification: React.PropTypes.func.isRequired,
         activeColor: React.PropTypes.instanceOf(Color)
     }
 
@@ -45,8 +49,6 @@ class App extends React.Component {
             gridShown: true,
             // Boolean to draw the middle lines in black
             middleLines: true,
-            // Time of last updated of the map
-            mapLastUpdated: new Date().getTime(),
 
             itemsObject: []
         };
@@ -79,8 +81,8 @@ class App extends React.Component {
     setupColorMap(basicColor) {
         const {rows, cols} = this.state;
 
-        let colorMap = [];
-        let currentCol = [];
+        let colorMap = Immutable.List();
+        let currentCol = undefined;
         let i = 0,
             j = 0;
 
@@ -90,18 +92,17 @@ class App extends React.Component {
 
         // Fill the array with basic values
         for (; i < cols; i++) {
-            currentCol = [];
+            currentCol = Immutable.List();
             j = 0;
 
             for (; j <= rows; j += HALF_TRIANGLE_FACTOR) {
-                currentCol.push(basicColor);
+                currentCol = currentCol.push(basicColor);
             }
-            colorMap.push(currentCol);
+            colorMap = colorMap.push(currentCol);
         }
 
         this.setState({
-            colorMap,
-            mapLastUpdated: new Date().getTime()
+            colorMap
         }, () => {
             this.drawMiddleLines(false);
         });
@@ -114,7 +115,8 @@ class App extends React.Component {
    *                                                    new state of middleLines
    */
     drawMiddleLines(drawFromChangingMiddleLinesState) {
-        const {rows, cols, middleLines, colorMap} = this.state;
+        const {rows, cols, middleLines} = this.state;
+        let {colorMap} = this.state;
         const {activeColor} = this.props;
 
         // If there's nothing to draw, stop the function
@@ -137,24 +139,27 @@ class App extends React.Component {
         const beforeMidCols = midCols - HALF_TRIANGLE_FACTOR,
             afterMidCols = midCols + HALF_TRIANGLE_FACTOR;
 
-        let currentCol = undefined;
-
         for (let i = 0; i < cols; i++) {
-            currentCol = colorMap[i];
-
             // Middle cell
-            if (i >= beforeMidCols && i <= afterMidCols) {
+            if (i > beforeMidCols - 1 && i < afterMidCols) {
                 for (let j = 0; j <= rows * HALF_FACTOR; j++) {
-                    currentCol[j] = basicColor;
+                    colorMap = colorMap.setIn([
+                        i, j
+                    ], basicColor);
                 }
+
+                colorMap = colorMap.setIn([
+                    i, rows * HALF_FACTOR
+                ], basicColor);
             } else {
-                currentCol[midRows * HALF_FACTOR] = basicColor;
+                colorMap = colorMap.setIn([
+                    i, midRows * HALF_FACTOR
+                ], basicColor);
             }
         }
 
         this.setState({
-            colorMap,
-            mapLastUpdated: new Date().getTime()
+            colorMap
         }, () => {
             this.render();
         });
@@ -208,8 +213,8 @@ class App extends React.Component {
     }
 
     doLoad() {
-        console.log('reload');
         let filename = SAVE_FOLDER + this.getFilename() + '.save.json';
+
         fs.readFile(filename, (err, data) => {
             if (err) {
                 console.error(err);
@@ -244,22 +249,38 @@ class App extends React.Component {
 
                 // Reload current component
 
-                save.state.colorMap = save.state.colorMap.map((array) => array.map((e) => new Color().fromObject(e.colors)));
+                save.state.colorMap = undefined;
 
                 this.setState(save.state, () => {
                     document.getElementById('cols').value = this.state.cols;
                     document.getElementById('rows').value = this.state.rows;
+                    this.props.setNotification({
+                      message : 'Loaded ' + filename
+                    });
                 });
             }
         });
     }
 
     doExport() {
-        let dataURL = this.refs.paper.getWrappedInstance().refs.canvas.toDataURL('image/png', 1);
-        let img = nativeImage.createFromDataURL(dataURL);
-        this.saveImage(img.toPng());
+        let svg = document.querySelector('svg'), // Inline SVG element
+            can = document.createElement('canvas'), // Not shown on page
+            ctx = can.getContext('2d'),
+            loader = new Image(); // Not shown on page
 
-        this.saveVect(paper.project.exportSVG({asString: true}));
+        let svgAsXML = (new XMLSerializer()).serializeToString(svg);
+
+        loader.width = can.width = svg.width;
+        loader.height = can.height = svg.height;
+        loader.onload = () => {
+            ctx.drawImage(loader, 0, 0, loader.width, loader.height);
+            let dataURL = can.toDataURL();
+            let img = nativeImage.createFromDataURL(dataURL);
+            this.saveImage(img.toPng());
+
+            this.saveVect(svgAsXML);
+        };
+        loader.src = 'data:image/svg+xml,' + encodeURIComponent(svgAsXML);
     }
 
     getFilename() {
@@ -268,7 +289,11 @@ class App extends React.Component {
 
     saveFile(data) {
         let filename = SAVE_FOLDER + this.getFilename() + '.save.json';
-        fs.writeFile(filename, data);
+        fs.writeFile(filename, data, () => {
+          this.props.setNotification({
+            message : 'Saved ' + filename
+          });
+        });
     }
 
     saveImage(data) {
@@ -278,7 +303,11 @@ class App extends React.Component {
 
     saveVect(data) {
         let filename = SVG_FOLDER + this.getFilename() + '.svg';
-        fs.writeFile(filename, data);
+        fs.writeFile(filename, data, () => {
+          this.props.setNotification({
+            message : 'Saved ' + filename
+          });
+        });
     }
 
     changeSize(e) {
@@ -313,7 +342,6 @@ class App extends React.Component {
                     rows={this.state.rows}
                     size={this.state.size}
                     colorMap={this.state.colorMap}
-                    mapLastUpdated={this.state.mapLastUpdated}
                     gridShown={this.state.gridShown}
                     simple={this.state.simple}/>
                 <div className="saves">
@@ -347,6 +375,7 @@ class App extends React.Component {
                             onChangeComplete={(c) => this.createAndActiveColor(c)}/>
                     </div>
                 </div>
+                <Notifier />
             </div>
         );
     }
@@ -361,6 +390,9 @@ const mapDispatchToProps = (dispatch) => {
     return {
         setActiveColor: (c) => {
             dispatch(setActiveColor(c));
+        },
+        setNotification: (n) => {
+          dispatch(setNotification(n));
         }
     };
 };

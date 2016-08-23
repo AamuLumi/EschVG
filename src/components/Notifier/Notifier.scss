@@ -1,0 +1,31 @@
+#notifier {
+  z-index: 1;
+  width: 100%;
+  padding: 0 16px;
+  height: 40px;
+  position: absolute;
+  right: 0;
+  bottom: -40px;
+  line-height: 40px;
+  font-weight: bold;
+  color: $light-color;
+  background-color: black;
+  border-radius: 2px;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.1) inset;
+  transition: all .25s ease-in .5s;
+  &--container {
+    position: relative;
+  }
+  &--closer {
+    position: absolute;
+    right: 0;
+    font-size: 0.8em;
+    cursor: pointer;
+  }
+  &.visible {
+    bottom: 0;
+  }
+  &.no-visible {
+    bottom: -40px;
+  }
+}

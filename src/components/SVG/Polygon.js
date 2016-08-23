@@ -48,7 +48,8 @@ export default class Polygon extends Component {
         return (<polygon
             points={pointsMapped}
             style={{
-            fill: fillColor.toHTML()
+            fill: fillColor.toHTML(),
+            stroke: fillColor.toHTML()
         }}/>);
     }
 }

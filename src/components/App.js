@@ -269,18 +269,21 @@ class App extends React.Component {
             loader = new Image(); // Not shown on page
 
         let svgAsXML = (new XMLSerializer()).serializeToString(svg);
+        let DOMURL = window.URL || window.webkitURL || window;
+        let svgBlob = new Blob([svgAsXML], {type: 'image/svg+xml;charset=utf-8'});
+        let url = DOMURL.createObjectURL(svgBlob);
 
-        loader.width = can.width = svg.width;
-        loader.height = can.height = svg.height;
+        loader.width = can.width = svg.width.baseVal.value;
+        loader.height = can.height = svg.height.baseVal.value;
         loader.onload = () => {
-            ctx.drawImage(loader, 0, 0, loader.width, loader.height);
-            let dataURL = can.toDataURL();
+            ctx.drawImage(loader, 0, 0);
+            let dataURL = can.toDataURL('image/png');
             let img = nativeImage.createFromDataURL(dataURL);
             this.saveImage(img.toPng());
 
             this.saveVect(svgAsXML);
         };
-        loader.src = 'data:image/svg+xml,' + encodeURIComponent(svgAsXML);
+        loader.src = url;
     }
 
     getFilename() {

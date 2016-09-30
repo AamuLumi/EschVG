@@ -36,7 +36,7 @@ export default class Swatch extends Component {
         if (nextProps.removable !== undefined) {
             nextState.removable = nextProps.removable;
         }
-        if (nextProps.activeId) {
+        if (nextProps.activeId !== undefined) {
             nextState.activeId = nextProps.activeId;
         }
         if (nextProps.id) {

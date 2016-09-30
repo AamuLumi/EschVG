@@ -24,10 +24,20 @@ function createMenu(mainWindow) {
                 mainWindow.webContents.send('save');
             }
         }, {
+            label: 'Save as',
+            click() {
+                mainWindow.webContents.send('saveAs');
+            }
+        }, {
             label: 'Load',
             accelerator: 'CommandOrControl+L',
             click() {
                 mainWindow.webContents.send('load');
+            }
+        }, {
+            label: 'Load as',
+            click() {
+                mainWindow.webContents.send('loadAs');
             }
         }, {
             label: 'Export',
@@ -97,8 +107,13 @@ function createWindow() {
 
     createMenu(mainWindow);
 
+
     // and load the index.html of the app.
-    mainWindow.loadURL(`file://${__dirname}/index.html`);
+    if (process.env.NODE_ENV === 'DEV'){
+      mainWindow.loadURL(`file://${__dirname}/index.dev.html`);
+    } else {
+      mainWindow.loadURL(`file://${__dirname}/index.production.html`);
+    }
 
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.show();

@@ -5,7 +5,8 @@ export const SET_NOTIFICATION = 'SET_NOTIFICATION';
 
 export const POINTER_MODES = {
   NORMAL : 0,
-  PICKER : 1
+  PICKER : 1,
+  LINER: 2
 };
 
 export function setActiveColor(c){

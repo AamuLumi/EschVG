@@ -17,9 +17,7 @@ const TWO_BYTES = ONE_BYTE * 2;
 class SwatchPanel extends Component {
     static propTypes = {
         setActiveColor: React.PropTypes.func.isRequired,
-        setPointerMode: React.PropTypes.func.isRequired,
-        activeColor: React.PropTypes.instanceOf(Color),
-        pickerColor: React.PropTypes.instanceOf(Color)
+        activeColor: React.PropTypes.instanceOf(Color)
     }
 
     constructor(props) {
@@ -27,8 +25,8 @@ class SwatchPanel extends Component {
 
         this.state = {
             swatches: [],
-            activeSwatchId: 0,
-            nextSwatchId: 0
+            activeSwatchId: 1,
+            nextSwatchId: 1
         };
 
         this.setActive = this.setActive.bind(this);
@@ -40,7 +38,6 @@ class SwatchPanel extends Component {
         this.addSwatch(this.randomColor(), true);
         this.addSwatch(this.randomColor(), true);
         this.addSwatch(this.randomColor(), true);
-        this.addPicker();
     }
 
     loadState(state){
@@ -62,24 +59,6 @@ class SwatchPanel extends Component {
             this.setState({swatches});
         }
 
-        if (nextProps.pickerColor !== this.props.pickerColor) {
-            let swatches = this.state.swatches;
-            let i = swatches.length - 1;
-
-            for (; i >= 0; i--) {
-                if (swatches[i].isPicker) {
-                    swatches[i].color = nextProps.pickerColor;
-                    break;
-                }
-            }
-
-            this.setState({
-                swatches
-            }, () => {
-                this.props.setActiveColor(this.state.swatches[this.state.activeSwatchId].color);
-            });
-        }
-
         this.props = nextProps;
     }
 
@@ -88,10 +67,6 @@ class SwatchPanel extends Component {
             activeSwatchId: id
         }, () => {
             this.props.setActiveColor(this.state.swatches[this.state.activeSwatchId].color);
-
-            if (this.state.swatches[id].isPicker) {
-                this.props.setPointerMode(POINTER_MODES.PICKER);
-            }
         });
     }
 
@@ -100,12 +75,6 @@ class SwatchPanel extends Component {
 
         swatches.unshift({color, removable, isPicker: false});
 
-        this.setState({swatches});
-    }
-
-    addPicker() {
-        let {swatches} = this.state;
-        swatches.push({color: white, removable: false, isPicker: true});
         this.setState({swatches});
     }
 
@@ -127,16 +96,9 @@ class SwatchPanel extends Component {
     }
 
     setColor(i) {
-        const {swatches} = this.state;
-        let nextState = {
+        this.setState({
             activeSwatchId: i
-        };
-
-        if (i === swatches.length - 1) {
-            nextState.pickerMode = true;
-        }
-
-        this.setState(nextState);
+        });
     }
 
     render() {
@@ -159,7 +121,7 @@ class SwatchPanel extends Component {
                             key={i}
                             activeId={activeSwatchId}
                             setActive={this.setActive}
-                            removeSwatch={this.removeSwatch}/>)
+                            removeSwatch={this.removeSwatch}/>);
                     })}
                 </div>
             </div>
@@ -170,8 +132,7 @@ class SwatchPanel extends Component {
 // Connect to the store
 const mapStateToProps = (state) => {
     return {
-        activeColor: state.getActiveColor.color,
-        pickerColor: state.getPickerColor.color
+        activeColor: state.getActiveColor.color
     };
 };
 
@@ -179,9 +140,6 @@ const mapDispatchToProps = (dispatch) => {
     return {
         setActiveColor: (c) => {
             dispatch(setActiveColor(c));
-        },
-        setPointerMode: (m) => {
-            dispatch(setPointerMode(m));
         }
     };
 };

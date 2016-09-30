@@ -112,7 +112,7 @@ a {
 #c-swatchPanel {
     -webkit-user-select: none;
 }
-.swatches {
+.swatches, #c-tool-panel {
     user-select: none;
     font-size: 1rem;
     flex: 1;
@@ -126,7 +126,7 @@ a {
     overflow: auto;
     -webkit-user-select: none;
 }
-.swatch {
+.swatch, .tool {
     order: 2;
     color: black;
     box-shadow: 0 0 0 1px black;

@@ -3,10 +3,12 @@ import {
     combineReducers
 } from 'redux';
 
+import {white} from '~/src/tools/Color';
+
 import * as Actions from '~/src/actions/Global';
 
 function getPickerColor(state = {
-    color: undefined
+    color: white
 }, action) {
     switch (action.type) {
         case Actions.SET_PICKER_COLOR:

@@ -3,11 +3,13 @@ import Paper from './Paper';
 import fs from 'fs';
 import {connect} from 'react-redux';
 import {nativeImage, ipcRenderer} from 'electron';
+const {dialog} = require('electron').remote;
 import {SketchPicker} from 'react-color';
 import Immutable from 'immutable';
 
 import {setActiveColor, setNotification} from '~/src/actions/Global';
 import SwatchPanel from './SwatchPanel';
+import ToolPanel from './ToolPanel';
 import Color, {transparent, black} from '~/src/tools/Color';
 import Notifier from './Notifier';
 
@@ -50,7 +52,9 @@ class App extends React.Component {
             // Boolean to draw the middle lines in black
             middleLines: true,
 
-            itemsObject: []
+            itemsObject: [],
+
+            filePath: undefined
         };
 
         // Bind methods
@@ -58,8 +62,10 @@ class App extends React.Component {
         this.doFill = this.doFill.bind(this);
         this.doResize = this.doResize.bind(this);
         this.doSave = this.doSave.bind(this);
+        this.doSaveAs = this.doSaveAs.bind(this);
         this.doExport = this.doExport.bind(this);
         this.doLoad = this.doLoad.bind(this);
+        this.doLoadAs = this.doLoadAs.bind(this);
 
         // Setup listeners to communicate with Electron main process
         this.setupListeners();
@@ -95,7 +101,7 @@ class App extends React.Component {
             currentCol = Immutable.List();
             j = 0;
 
-            for (; j <= rows +1; j += HALF_TRIANGLE_FACTOR) {
+            for (; j <= rows + 1; j += HALF_TRIANGLE_FACTOR) {
                 currentCol = currentCol.push(basicColor);
             }
             colorMap = colorMap.push(currentCol);
@@ -167,7 +173,9 @@ class App extends React.Component {
 
     setupListeners() {
         ipcRenderer.on('save', this.doSave);
+        ipcRenderer.on('saveAs', this.doSaveAs);
         ipcRenderer.on('load', this.doLoad);
+        ipcRenderer.on('loadAs', this.doLoadAs);
         ipcRenderer.on('export', this.doExport);
         ipcRenderer.on('middleLines', (e, newState) => {
             this.setState({
@@ -202,20 +210,87 @@ class App extends React.Component {
         });
     }
 
+    getStateForSave() {
+        return JSON.stringify({state: this.state, swatchPanel: this.refs.swatchPanel.getWrappedInstance().state, itemsObject: this.refs.paper.getWrappedInstance().state.itemsObject});
+    }
+
     doSave() {
-        let save = {
-            state: this.state,
-            swatchPanel: this.refs.swatchPanel.getWrappedInstance().state,
-            itemsObject: this.refs.paper.getWrappedInstance().state.itemsObject
-        };
-        let data = JSON.stringify(save);
-        this.saveFile(data);
+        if (this.state.filePath) {
+            this.saveFile(this.getStateForSave(), this.state.filePath);
+        } else {
+            this.doSaveAs();
+        }
+    }
+
+    doSaveAs() {
+        dialog.showSaveDialog([], (path) => {
+            this.saveFile(this.getStateForSave(), path);
+        });
     }
 
     doLoad() {
-        let filename = SAVE_FOLDER + this.getFilename() + '.save.json';
+        if (this.state.filePath) {
+            this.loadFile(this.state.filePath);
+        } else {
+            this.doLoadAs();
+        }
+    }
 
-        fs.readFile(filename, (err, data) => {
+    doLoadAs() {
+        dialog.showOpenDialog({
+            filters: [
+                {
+                    name: 'EschVG Save',
+                    extensions: ['save.json']
+                }
+            ],
+            properties: ['openFile']
+        }, (path) => {
+            if (path && path[0]) {
+                this.loadFile(path[0]);
+            }
+        });
+    }
+
+    doExport() {
+        let exportImage = (path) => {
+            let svg = document.querySelector('svg'), // Inline SVG element
+                can = document.createElement('canvas'), // Not shown on page
+                ctx = can.getContext('2d'),
+                loader = new Image(); // Not shown on page
+
+            let svgAsXML = (new XMLSerializer()).serializeToString(svg);
+            let DOMURL = window.URL || window.webkitURL || window;
+            let svgBlob = new Blob([svgAsXML], {type: 'image/svg+xml;charset=utf-8'});
+            let url = DOMURL.createObjectURL(svgBlob);
+
+            loader.width = can.width = svg.width.baseVal.value;
+            loader.height = can.height = svg.height.baseVal.value;
+            loader.onload = () => {
+                ctx.drawImage(loader, 0, 0);
+
+                let dataURL = can.toDataURL('image/png');
+                let img = nativeImage.createFromDataURL(dataURL);
+
+                this.saveImage(img.toPng(), path);
+                this.saveVect(svgAsXML, path);
+            };
+            loader.src = url;
+        };
+
+        if (this.state.filePath) {
+            exportImage(this.state.filePath);
+        } else {
+            dialog.showSaveDialog([], exportImage);
+        }
+    }
+
+    getFilename() {
+        return document.getElementById('inputFilename').value;
+    }
+
+    loadFile(path) {
+        fs.readFile(path, (err, data) => {
             if (err) {
                 console.error(err);
             } else {
@@ -254,63 +329,48 @@ class App extends React.Component {
                     });
 
                     this.refs.swatchPanel.getWrappedInstance().loadState(save.swatchPanel);
-                    
+
                     this.props.setNotification({
-                      message : 'Loaded ' + filename
+                        message: 'Loaded ' + path
                     });
+
+                    this.setState({filePath: path});
                 });
             }
         });
     }
 
-    doExport() {
-        let svg = document.querySelector('svg'), // Inline SVG element
-            can = document.createElement('canvas'), // Not shown on page
-            ctx = can.getContext('2d'),
-            loader = new Image(); // Not shown on page
+    saveFile(data, path) {
+        if (path.indexOf('.save.json') === -1) {
+            path += '.save.json';
+        }
 
-        let svgAsXML = (new XMLSerializer()).serializeToString(svg);
-        let DOMURL = window.URL || window.webkitURL || window;
-        let svgBlob = new Blob([svgAsXML], {type: 'image/svg+xml;charset=utf-8'});
-        let url = DOMURL.createObjectURL(svgBlob);
+        fs.writeFile(path, data, () => {
+            this.props.setNotification({
+                message: 'Saved ' + path
+            });
 
-        loader.width = can.width = svg.width.baseVal.value;
-        loader.height = can.height = svg.height.baseVal.value;
-        loader.onload = () => {
-            ctx.drawImage(loader, 0, 0);
-            let dataURL = can.toDataURL('image/png');
-            let img = nativeImage.createFromDataURL(dataURL);
-            this.saveImage(img.toPng());
-
-            this.saveVect(svgAsXML);
-        };
-        loader.src = url;
-    }
-
-    getFilename() {
-        return document.getElementById('inputFilename').value;
-    }
-
-    saveFile(data) {
-        let filename = SAVE_FOLDER + this.getFilename() + '.save.json';
-        fs.writeFile(filename, data, () => {
-          this.props.setNotification({
-            message : 'Saved ' + filename
-          });
+            this.setState({filePath: path});
         });
     }
 
-    saveImage(data) {
-        let filename = PNG_FOLDER + this.getFilename() + '.png';
-        fs.writeFile(filename, data);
+    saveImage(data, path) {
+        if (path.indexOf('.png') === -1) {
+            path += '.png';
+        }
+
+        fs.writeFile(path, data);
     }
 
-    saveVect(data) {
-        let filename = SVG_FOLDER + this.getFilename() + '.svg';
-        fs.writeFile(filename, data, () => {
-          this.props.setNotification({
-            message : 'Saved ' + filename
-          });
+    saveVect(data, path) {
+        if (path.indexOf('.svg') === -1) {
+            path += '.svg';
+        }
+
+        fs.writeFile(path, data, () => {
+            this.props.setNotification({
+                message: 'Saved ' + path
+            });
         });
     }
 
@@ -339,6 +399,7 @@ class App extends React.Component {
                             max="30"/>
                     </div>
                     <SwatchPanel ref="swatchPanel"/>
+                    <ToolPanel ref="toolPanel"/>
                 </div>
                 <Paper
                     ref="paper"
@@ -355,11 +416,6 @@ class App extends React.Component {
                         <button className="do-fill" onClick={this.doFill}>fill</button>
                     </div>
                     <div id="config-panel">
-                        <input
-                            className="configField"
-                            placeholder="Filename (without extension)"
-                            id="inputFilename"
-                            type="text"/>
                         <input
                             className="configField"
                             placeholder="Number of cols"
@@ -379,7 +435,7 @@ class App extends React.Component {
                             onChangeComplete={(c) => this.createAndActiveColor(c)}/>
                     </div>
                 </div>
-                <Notifier />
+                <Notifier/>
             </div>
         );
     }
@@ -396,7 +452,7 @@ const mapDispatchToProps = (dispatch) => {
             dispatch(setActiveColor(c));
         },
         setNotification: (n) => {
-          dispatch(setNotification(n));
+            dispatch(setNotification(n));
         }
     };
 };

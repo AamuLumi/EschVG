@@ -1,6 +1,6 @@
 import React from 'react';
 import {connect} from 'react-redux';
-import {setPickerColor, setPointerMode, POINTER_MODES} from '~/src/actions/Global';
+import {setActiveColor, setPickerColor, setPointerMode, POINTER_MODES} from '~/src/actions/Global';
 import SVG, {Polygon, Line, SVGGroup} from '~/src/components/SVG';
 import Color, {transparent, lightGrey} from '~/src/tools/Color';
 import Immutable from 'immutable';
@@ -17,7 +17,7 @@ const sqrt3 = sqrt(3);
 const GRID_COLOR = lightGrey;
 const REDRAW_ITEMS = true;
 
-export default class Paper extends React.Component {
+class Paper extends React.Component {
     static propTypes = {
         cols: React.PropTypes.number,
         rows: React.PropTypes.number,
@@ -25,7 +25,8 @@ export default class Paper extends React.Component {
         colorMap: React.PropTypes.instanceOf(Immutable.List),
         activeColor: React.PropTypes.instanceOf(Color),
         mapLastUpdated: React.PropTypes.number,
-        itemsObject: React.PropTypes.array
+        itemsObject: React.PropTypes.array,
+        pointerMode: React.PropTypes.number.isRequired
     }
 
     constructor(props) {
@@ -42,7 +43,8 @@ export default class Paper extends React.Component {
             gridShown: true,
             grid: Immutable.List(),
             selection: {},
-            itemsObject: Immutable.List()
+            itemsObject: Immutable.List(),
+            selectedPoint: undefined
         };
 
         this.createItems = this.createItems.bind(this);
@@ -50,8 +52,8 @@ export default class Paper extends React.Component {
 
     reinit(redrawItems) {
         this.createBackground();
-        if (redrawItems){
-          this.createItems();
+        if (redrawItems) {
+            this.createItems();
         }
     }
 
@@ -233,12 +235,20 @@ export default class Paper extends React.Component {
             for (let j = 0; j <= rows; j++) {
                 if (i % 2 === 0) {
                     currentY = j * height;
-                    currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY, i, j * 2, colorMap.getIn([i, j * 2])));
-                    currentRow = currentRow.push(this.createTriangle(currentX, currentY, i, j * 2 + 1, colorMap.getIn([i, j * 2 + 1])));
+                    currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY, i, j * 2, colorMap.getIn([
+                        i, j * 2
+                    ])));
+                    currentRow = currentRow.push(this.createTriangle(currentX, currentY, i, j * 2 + 1, colorMap.getIn([
+                        i, j * 2 + 1
+                    ])));
                 } else {
                     currentY = j * height - midHeight;
-                    currentRow = currentRow.push(this.createTriangle(currentX, currentY, i, j * 2, colorMap.getIn([i, j * 2])));
-                    currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY + height, i, j * 2 + 1, colorMap.getIn([i, j * 2 + 1])));
+                    currentRow = currentRow.push(this.createTriangle(currentX, currentY, i, j * 2, colorMap.getIn([
+                        i, j * 2
+                    ])));
+                    currentRow = currentRow.push(this.createInversedTriangle(currentX, currentY + height, i, j * 2 + 1, colorMap.getIn([
+                        i, j * 2 + 1
+                    ])));
                 }
             }
 
@@ -248,8 +258,14 @@ export default class Paper extends React.Component {
         this.setState({itemsObject: itemsObject});
     }
 
-    drawTriangleForMousePoint(mouseX, mouseY, color) {
-        let {width, height, itemsObject} = this.state;
+    drawTriangleForMousePoint(mouseX, mouseY, color, itemsObject) {
+        let itemsFromState = false;
+        let {width, height} = this.state;
+
+        if (!itemsObject){
+          itemsObject = this.state.itemsObject;
+          itemsFromState = true;
+        }
 
         // i = column, j = row
         let i = mouseX / width,
@@ -279,7 +295,7 @@ export default class Paper extends React.Component {
             } else {
                 itemsObject = itemsObject.setIn([
                     col, parseInt(j) * 2 + 1
-                ], this.createTriangle(x, y, i, j, color))// Else if odd;
+                ], this.createTriangle(x, y, i, j, color)) // Else if odd;
             }
         } else {
             if (2 * jCentered - iCentered > 1) {
@@ -297,10 +313,92 @@ export default class Paper extends React.Component {
             }
         }
 
-        this.setState({itemsObject: itemsObject});
+        if (itemsFromState) {
+          this.setState({itemsObject: itemsObject});
+        }
+
+        return itemsObject;
+    }
+
+    drawTrianglesForLine(p1, p2) {
+        const deltaX = p1[0] > p2[0]
+            ? p1[0] - p2[0]
+            : p2[0] - p1[0];
+        const deltaY = p1[1] > p2[1]
+            ? p1[1] - p2[1]
+            : p2[1] - p1[1];
+
+        const directionX = p1[0] > p2[0]
+            ? -1
+            : 1;
+        const directionY = p1[1] > p2[1]
+            ? -1
+            : 1;
+
+        const nbPoints = deltaX > deltaY
+            ? deltaX
+            : deltaY;
+
+        let currentX = 0,
+            currentY = 0;
+
+        let itemsObject = undefined;
+
+        for (let i = 0; i < nbPoints; i++) {
+            currentX = p1[0] + directionX * deltaX * i / nbPoints;
+            currentY = p1[1] + directionY * deltaY * i / nbPoints;
+            itemsObject = this.drawTriangleForMousePoint(currentX, currentY, this.props.activeColor, itemsObject);
+        }
+
+        this.setState({itemsObject});
     }
 
     // Selection methods
+
+    getTriangleForPoint(mouseX, mouseY) {
+        // Same as drawTriangleForMousePoint)
+        const {width, height, itemsObject} = this.state;
+
+        let i = mouseX / width,
+            j = mouseY / height;
+
+        let iCentered = i - parseInt(i),
+            jCentered = j - parseInt(j);
+
+        let col = parseInt(i);
+
+        // If is even
+        if (parseInt(i) % 2 === 0) {
+            // Search the triangles who must be drawn
+            if (2 * jCentered - iCentered < 0) {
+                return itemsObject.getIn([
+                    col, parseInt(j) * 2
+                ]);
+            } else if (2 * jCentered + iCentered > 2) {
+                return itemsObject.getIn([
+                    col, parseInt(j) * 2 + 2
+                ]);
+            } else {
+                return itemsObject.getIn([
+                    col, parseInt(j) * 2 + 1
+                ]); // Else if odd;
+            }
+        } else {
+            if (2 * jCentered - iCentered > 1) {
+                return itemsObject.getIn([
+                    col, parseInt(j) * 2 + 2
+                ]);
+            } else if (2 * jCentered + iCentered < 1) {
+                return itemsObject.getIn([
+                    col, parseInt(j) * 2
+                ]);
+            } else {
+                return itemsObject.getIn([
+                    col, parseInt(j) * 2 + 1
+                ]);
+            }
+        }
+    }
 
     drawSelectionForMousePoint(mouseX, mouseY, color) {
         // Same as drawTriangleForMousePoint)
@@ -345,18 +443,40 @@ export default class Paper extends React.Component {
     // Mouse methods
 
     onMouseDown(e) {
-        this.setState({down: true});
-        this.drawTriangleForMousePoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY, this.props.activeColor);
+        const {pointerMode} = this.props;
+
+        if (pointerMode === POINTER_MODES.PICKER) {
+            this.props.setActiveColor(this.getTriangleForPoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY).fillColor);
+            this.props.setPointerMode(POINTER_MODES.NORMAL);
+        } else if (pointerMode === POINTER_MODES.LINER) {
+            this.setState({
+                selectedPoint: [e.nativeEvent.offsetX, e.nativeEvent.offsetY]
+            });
+        } else {
+            this.setState({down: true});
+            this.drawTriangleForMousePoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY, this.props.activeColor);
+        }
     }
 
-    onMouseUp() {
-        this.setState({down: false});
+    onMouseUp(e) {
+        const {pointerMode} = this.props;
+        const {selectedPoint} = this.state;
+
+        if (pointerMode === POINTER_MODES.LINER) {
+            this.drawTrianglesForLine(selectedPoint, [e.nativeEvent.offsetX, e.nativeEvent.offsetY]);
+            this.props.setPointerMode(POINTER_MODES.NORMAL);
+            this.setState({down: false});
+        } else {
+            this.setState({down: false});
+        }
     }
 
     onMouseMove(e) {
+        const {pointerMode} = this.props;
+
         this.drawSelectionForMousePoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY, this.props.activeColor);
 
-        if (this.state.down) {
+        if (this.state.down && pointerMode === POINTER_MODES.NORMAL) {
             this.drawTriangleForMousePoint(e.nativeEvent.offsetX, e.nativeEvent.offsetY, this.props.activeColor);
         }
     }
@@ -409,7 +529,7 @@ export default class Paper extends React.Component {
                 <SVG
                     onMouseDown={(e) => this.onMouseDown(e)}
                     onMouseMove={(e) => this.onMouseMove(e)}
-                    onMouseUp={() => this.onMouseUp()}
+                    onMouseUp={(e) => this.onMouseUp(e)}
                     onMouseLeave={() => this.removeSelection()}
                     width={this.state.cols * this.state.width}
                     height={this.state.rows * this.state.height}>
@@ -433,6 +553,9 @@ const mapDispatchToProps = (dispatch) => {
         },
         setPointerMode: (m) => {
             dispatch(setPointerMode(m));
+        },
+        setActiveColor: (c) => {
+            dispatch(setActiveColor(c));
         }
     };
 };

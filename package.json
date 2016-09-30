@@ -4,9 +4,11 @@
   "description": "EschVG Electron app",
   "main": "main.js",
   "scripts": {
-    "start": "NODE_ENV=DEV electron main.js",
+    "start": "NODE_ENV=PRODUCTION electron main.js",
+    "start-dev": "NODE_ENV=DEV electron main.js",
     "watch": "./node_modules/.bin/webpack-dev-server",
-    "dev": "NODE_ENV=DEV node ./webserver.js"
+    "dev": "NODE_ENV=DEV node ./webserver.js",
+    "deploy": "NODE_ENV=production webpack -p --config webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -18,16 +20,8 @@
     "React",
     "SVG"
   ],
-  "author": "Florian \"Aamu Lumi\" Kauder <florian@kauder.fr>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/AamuLumi/EschVG/issues"
-  },
-  "homepage": "https://github.com/AamuLumi/EschVG#readme",
+  "productName": "EschVG",
   "devDependencies": {
-    "electron-prebuilt": "^1.0.1"
-  },
-  "dependencies": {
     "babel": "^6.5.2",
     "babel-core": "^6.8.0",
     "babel-eslint": "^6.0.4",
@@ -39,10 +33,11 @@
     "babel-register": "^6.8.0",
     "babel-root-import": "^3.2.2",
     "css-loader": "^0.23.1",
+    "electron": "1.4.1",
+    "electron-builder": "next",
     "eslint": "^2.10.1",
     "eslint-plugin-react": "^5.1.1",
     "immutable": "^3.8.1",
-    "ipc": "0.0.1",
     "json-loader": "^0.5.4",
     "node-sass": "^3.7.0",
     "react": "^15.0.2",
@@ -57,5 +52,11 @@
     "webpack": "^1.13.0",
     "webpack-dev-server": "^1.14.1",
     "webpack-hot-middleware": "^2.10.0"
-  }
+  },
+  "author": "Florian \"Aamu Lumi\" Kauder <florian@kauder.fr>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AamuLumi/EschVG/issues"
+  },
+  "homepage": "https://github.com/AamuLumi/EschVG#readme"
 }
